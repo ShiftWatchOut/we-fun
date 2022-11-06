@@ -2,37 +2,25 @@ package main
 
 import (
 	"fmt"
-	"io"
+	"log"
 	"net/http"
-	"os"
-	"time"
+	"sync"
 )
 
-func main() {
-	start := time.Now()
-	ch := make(chan string)
-	for _, url := range os.Args[1:] {
-		go fetch(url, ch)
-	}
-	for range os.Args[1:] {
-		fmt.Println(<-ch)
-	}
-	fmt.Printf("%.2fs elapsed\n", time.Since(start).Seconds())
-}
+var mu sync.Mutex
+var count int
 
-func fetch(url string, ch chan<- string) {
-	start := time.Now()
-	resp, err := http.Get(url)
-	if err != nil {
-		ch <- fmt.Sprint(err)
-		return
-	}
-	nbytes, err := io.Copy(io.Discard, resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		ch <- fmt.Sprintf("while reading %s: %v\n", url, err)
-		return
-	}
-	secs := time.Since(start).Seconds()
-	ch <- fmt.Sprintf("%.2fs  %7d  %s", secs, nbytes, url)
+func main() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		count++
+		mu.Unlock()
+		fmt.Fprintf(w, "URL.Path = %q\n", r.URL.Path)
+	})
+	http.HandleFunc("/count", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		fmt.Fprintf(w, "Count %d\n", count)
+		mu.Unlock()
+	})
+	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 }

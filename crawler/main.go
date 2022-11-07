@@ -1,26 +1,65 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
-	"sync"
+	"os"
+	"strconv"
+	"time"
+
+	"github.com/eatmoreapple/openwechat"
+	"github.com/skip2/go-qrcode"
 )
 
-var mu sync.Mutex
-var count int
+const groupName = "国星宇航"
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		count++
-		mu.Unlock()
-		fmt.Fprintf(w, "URL.Path = %q\n", r.URL.Path)
-	})
-	http.HandleFunc("/count", func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		fmt.Fprintf(w, "Count %d\n", count)
-		mu.Unlock()
-	})
-	log.Fatal(http.ListenAndServe("localhost:8000", nil))
+	bot := openwechat.DefaultBot(openwechat.Desktop)
+	bot.UUIDCallback = func(uuid string) {
+		q, _ := qrcode.New("https://login.weixin.qq.com/l/"+uuid, qrcode.Low)
+		fmt.Println(q.ToString(true))
+	}
+	bot.MessageHandler = func(msg *openwechat.Message) {
+		if msg.IsText() && msg.Content == "ping" {
+			msg.ReplyText("pong")
+		}
+	}
+	reloadStorage := openwechat.NewJsonFileHotReloadStorage("storage.json")
+	err := bot.HotLogin(reloadStorage)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	self, err := bot.GetCurrentUser()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	memberMap := make(map[string]string)
+
+	groups, _ := self.Groups()
+	for _, group := range groups.SearchByNickName(1, groupName) {
+		fmt.Println(group)
+		members, _ := group.Members()
+		for _, member := range members {
+			if _, ok := memberMap[member.NickName]; ok {
+				memberMap[member.NickName+member.DisplayName] = member.DisplayName
+			} else {
+				memberMap[member.NickName] = member.DisplayName
+			}
+		}
+	}
+	year, month, day := time.Now().Date()
+	filename := strconv.Itoa(year) + "-" + strconv.Itoa(int(month)) + "-" + strconv.Itoa(day)
+	fmt.Println(len(memberMap), filename)
+	b, _ := json.MarshalIndent(memberMap, "", "  ")
+	file, err := os.Create(filename + ".json")
+	if err != nil {
+		fmt.Println("err: ", err)
+		return
+	}
+	file.Write(b)
+	file.Close()
+	bot.Block()
 }

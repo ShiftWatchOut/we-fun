@@ -25,7 +25,7 @@ func main() {
 		}
 	}
 	reloadStorage := openwechat.NewJsonFileHotReloadStorage("storage.json")
-	err := bot.HotLogin(reloadStorage)
+	err := bot.HotLogin(reloadStorage, true)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -53,7 +53,11 @@ func main() {
 	year, month, day := time.Now().Date()
 	filename := strconv.Itoa(year) + "-" + strconv.Itoa(int(month)) + "-" + strconv.Itoa(day)
 	fmt.Println(len(memberMap), filename)
-	b, _ := json.MarshalIndent(memberMap, "", "  ")
+	b, err := json.MarshalIndent(memberMap, "", "  ")
+	if err != nil {
+		fmt.Println("json err: ", err)
+		return
+	}
 	file, err := os.Create(filename + ".json")
 	if err != nil {
 		fmt.Println("err: ", err)
@@ -62,4 +66,14 @@ func main() {
 	file.Write(b)
 	file.Close()
 	bot.Block()
+}
+
+// 判断所给路径文件/文件夹是否存在
+
+func Exists(path string) bool {
+	_, err := os.Stat(path) //os.Stat获取文件信息
+	if err != nil {
+		return os.IsExist(err)
+	}
+	return true
 }

@@ -2,7 +2,3 @@
 .vscode
 dist/
 .DS_Store
-*.exe
-*.json
-*.png
-*.jpeg

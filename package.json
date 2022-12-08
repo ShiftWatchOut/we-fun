@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "run:crawler": "cd ./crawler/ & go run ./main.go"
+    "run:crawler": "cd ./crawler/ & go run ./main.go",
+    "run:web": "cd ./crawler/ & go run ./main.go ./router.go"
   },
   "author": "shift <2080717464@qq.com>",
   "license": "MIT"

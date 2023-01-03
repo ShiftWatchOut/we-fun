@@ -16,6 +16,7 @@ func main() {
 	router.GET("/logout-wechat", logoutWechat)
 	router.GET("/save-group-info", saveGroupInfo)
 	router.GET("/sql-test", sqlTest)
+	router.GET("/ask-for-login", askForLogin)
 
 	router.Run()
 }

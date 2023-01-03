@@ -22,11 +22,34 @@ import (
 var bot *openwechat.Bot
 
 func logoutWechat(c *gin.Context) {
-	err := bot.Logout()
-	if err != nil {
-		fmt.Printf("%s", err)
+	if bot != nil {
+		err := bot.Logout()
+		if err != nil {
+			fmt.Printf("%s", err)
+		}
 	}
 	c.String(http.StatusOK, "Logged out")
+}
+
+func askForLogin(c *gin.Context) {
+	bot = openwechat.DefaultBot(openwechat.Desktop)
+	done := make(chan bool)
+	bot.UUIDCallback = func(uuid string) {
+		q, _ := qrcode.New("https://login.weixin.qq.com/l/"+uuid, qrcode.Low)
+		imgPath := "./tmp.jpg"
+		q.WriteFile(200, imgPath)
+		c.File(imgPath)
+		done <- true
+	}
+	go func() {
+		reloadStorage := openwechat.NewJsonFileHotReloadStorage("storage.json")
+		err := bot.HotLogin(reloadStorage, true)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}()
+	<-done
 }
 
 func saveGroupInfo(c *gin.Context) {

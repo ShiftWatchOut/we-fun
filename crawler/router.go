@@ -27,6 +27,7 @@ func logoutWechat(c *gin.Context) {
 		if err != nil {
 			fmt.Printf("%s", err)
 		}
+		bot = nil
 	}
 	c.String(http.StatusOK, "Logged out")
 }

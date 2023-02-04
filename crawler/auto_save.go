@@ -7,17 +7,28 @@ import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"sort"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
-const url_1 = "http://localhost:8080/save-group-info"
-const url_2 = "http://localhost:8080/secret-kill-server"
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+}
 
 func main() {
+	gin_base_url := os.Getenv("GIN_BASE_URL")
+	url_1 := "http://" + gin_base_url + "/save-group-info"
+	url_2 := "http://" + gin_base_url + "/secret-kill-server"
 	fmt.Println("auto save running...")
 	resp, err := http.Get(url_1)
 	if err != nil {

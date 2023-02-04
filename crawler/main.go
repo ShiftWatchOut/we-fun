@@ -1,9 +1,11 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 const groupName = "国星宇航"
@@ -38,7 +40,12 @@ func main() {
 	})
 
 	go func() {
-		router.Run()
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		router.Run(os.Getenv("GIN_BASE_URL"))
 	}()
 	<-done
 }

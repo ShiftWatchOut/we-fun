@@ -14,9 +14,10 @@ import (
 
 	"github.com/eatmoreapple/openwechat"
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 	"github.com/skip2/go-qrcode"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var bot *openwechat.Bot
@@ -138,41 +139,46 @@ func loadJSON() {
 		log.Fatal(err)
 		return
 	}
-	sqlStr := os.Getenv("SQL_STR")
-	fmt.Println("sql connect: ", sqlStr)
-	db, err := sql.Open("mysql", sqlStr)
+	dsn := os.Getenv("SQL_STR")
+	fmt.Println("sql connect: ", dsn)
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-	db.Ping()
-	defer db.Close()
+
 	// 读文件
-	constr := "./2022-11-"
-	extname := ".json"
-	for i := 7; i < 29; i++ {
-		filename := fmt.Sprintf("%s%d%s", constr, i, extname)
-		content, err := os.ReadFile(filename)
-		if err != nil {
-			panic(err)
-		}
-		memberMap := make(map[string]string)
-		err = json.Unmarshal(content, &memberMap)
-		if err != nil {
-			panic(err)
-		}
-		_, err = db.Exec(fmt.Sprintf("CREATE TABLE 2022_11_%d(nickname VARCHAR(32), ingroupname VARCHAR(32), PRIMARY KEY(nickname));", i))
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		for k, v := range memberMap {
-			k = strings.ReplaceAll(k, "'", "\\'")
-			_, err = db.Exec(fmt.Sprintf("INSERT INTO 2022_11_%d VALUES('%s', '%s')", i, k, v))
+	pwd, _ := os.Getwd()
+	fileInfoList, _ := os.ReadDir(pwd)
+	for f := range fileInfoList {
+		file := fileInfoList[f]
+		filename := file.Name()
+		if strings.Contains(filename, ".json") && strings.Contains(filename, "-") {
+			content, err := os.ReadFile(filename)
 			if err != nil {
-				log.Fatal(err)
-				return
+				panic(err)
 			}
+			memberMap := make(map[string]string)
+			err = json.Unmarshal(content, &memberMap)
+			if err != nil {
+				panic(err)
+			}
+			tableName := strings.Split(filename, ".")[0]
+			db.Table(tableName).AutoMigrate(&GroupMember{})
+			memberList := make([]GroupMember, 0)
+			for k, v := range memberMap {
+				memberList = append(memberList, GroupMember{
+					Nickname:    k,
+					IngroupName: v,
+				})
+			}
+			db.Table(tableName).Create(&memberList)
 		}
 	}
+}
+
+type GroupMember struct {
+	Nickname    string
+	IngroupName string
 }
